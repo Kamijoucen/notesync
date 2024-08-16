@@ -1,9 +1,12 @@
 package router
 
-import "github.com/labstack/echo/v4"
+import (
+	"github.com/kamijoucen/notesync/internal/ctx"
+	"github.com/kamijoucen/notesync/pkg/config"
+	"github.com/labstack/echo/v4"
+)
 
-func Init(e *echo.Echo) {
-	e.GET("/test", func(c echo.Context) error {
-		return c.String(200, "Hello, World!")
-	})
+func Init(e *echo.Echo, cfg *config.ServerConfig) {
+	serverCtx := ctx.NewServerContext(cfg)
+	e.POST("/upload", FileUpload(serverCtx))
 }

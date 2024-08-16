@@ -18,8 +18,6 @@ func main() {
 		panic(err)
 	}
 	e := echo.New()
-
-	router.Init(e)
-
+	router.Init(e, cfg)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", cfg.Port)))
 }

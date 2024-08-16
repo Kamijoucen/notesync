@@ -3,15 +3,12 @@ package bootstrap
 import (
 	"os"
 
+	"github.com/kamijoucen/notesync/pkg/config"
 	"gopkg.in/yaml.v3"
 )
 
-type ServerConfig struct {
-	Port     int    `yaml:"port"`
-	FilePath string `yaml:"file-path"`
-}
+func LoadConfig(cfgPath string) (*config.ServerConfig, error) {
 
-func LoadConfig(cfgPath string) (*ServerConfig, error) {
 	cfgFile, err := os.Open(cfgPath)
 	defer func() {
 		if err = cfgFile.Close(); err != nil {
@@ -21,7 +18,7 @@ func LoadConfig(cfgPath string) (*ServerConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := &ServerConfig{}
+	cfg := &config.ServerConfig{}
 	if err = yaml.NewDecoder(cfgFile).Decode(cfg); err != nil {
 		return nil, err
 	}
