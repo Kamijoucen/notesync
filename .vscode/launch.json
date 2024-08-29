@@ -10,7 +10,15 @@
             "args": [
                 "-f",
                 "../../configs/server.yaml"
-            ],
+            ]
+        },
+        {
+            "name": "sycnclient",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/syncclient/main.go",
+            "args": []
         }
     ]
 }

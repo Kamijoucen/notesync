@@ -9,6 +9,10 @@ import (
 func FileUpload(serverCtx *ctx.ServerContext) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		reqCtx := ctx.NewRequestContext(serverCtx, c)
-		return services.UploadFile(reqCtx)
+		fromfile, err := c.FormFile("file")
+		if err != nil {
+			return err
+		}
+		return services.UploadFile(reqCtx, fromfile)
 	}
 }
