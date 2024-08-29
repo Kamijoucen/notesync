@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build github.com/kamijoucen/notesync/cmd/syncserver" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="notesync" />
+    <working_directory value="$PROJECT_DIR$" />
+    <parameters value="-f $ContentRoot$\configs\server.yaml" />
+    <kind value="PACKAGE" />
+    <package value="github.com/kamijoucen/notesync/cmd/syncserver" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/syncserver/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

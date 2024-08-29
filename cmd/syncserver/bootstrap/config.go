@@ -3,8 +3,9 @@ package bootstrap
 import (
 	"os"
 
-	"github.com/kamijoucen/notesync/pkg/config"
 	"gopkg.in/yaml.v3"
+
+	"github.com/kamijoucen/notesync/pkg/config"
 )
 
 func LoadConfig(cfgPath string) (*config.ServerConfig, error) {

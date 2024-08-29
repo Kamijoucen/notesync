@@ -4,9 +4,10 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/labstack/echo/v4"
+
 	"github.com/kamijoucen/notesync/cmd/syncserver/bootstrap"
 	"github.com/kamijoucen/notesync/internal/router"
-	"github.com/labstack/echo/v4"
 )
 
 var configFile = flag.String("f", "server.yaml", "config file")
