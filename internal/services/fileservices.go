@@ -2,25 +2,16 @@ package services
 
 import (
 	"io"
-	"mime/multipart"
 	"os"
 	"path"
 
 	"github.com/kamijoucen/notesync/internal/ctx"
+	"github.com/kamijoucen/notesync/pkg/definition"
 )
 
-func UploadFile(svc *ctx.RequestContext, fileheader *multipart.FileHeader) error {
+func StoreFile(svc *ctx.RequestContext, src *definition.FileSource) error {
 	// joinpath
-	filepath := path.Join(svc.ServerCtx.Config.FilePath, fileheader.Filename)
-	// save file
-	src, err := fileheader.Open()
-	if err != nil {
-		return err
-	}
-	defer func(src multipart.File) {
-		_ = src.Close()
-	}(src)
-
+	filepath := path.Join(svc.ServerCtx.Config.FilePath, src.Name)
 	dst, err := os.Create(filepath)
 	if err != nil {
 		return err
@@ -28,7 +19,7 @@ func UploadFile(svc *ctx.RequestContext, fileheader *multipart.FileHeader) error
 	defer func(dst *os.File) {
 		_ = dst.Close()
 	}(dst)
-	if _, err = io.Copy(dst, src); err != nil {
+	if _, err = io.Copy(dst, src.Reader); err != nil {
 		return err
 	}
 	return nil
