@@ -17,13 +17,17 @@ func UploadFile(svc *ctx.RequestContext, fileheader *multipart.FileHeader) error
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func(src multipart.File) {
+		_ = src.Close()
+	}(src)
 
 	dst, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
+	defer func(dst *os.File) {
+		_ = dst.Close()
+	}(dst)
 	if _, err = io.Copy(dst, src); err != nil {
 		return err
 	}
