@@ -22,5 +22,6 @@ func StoreFile(svc *ctx.RequestContext, src *definition.FileSource) error {
 	if _, err = io.Copy(dst, src.Reader); err != nil {
 		return err
 	}
+
 	return nil
 }
