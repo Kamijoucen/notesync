@@ -1,4 +1,4 @@
-package services
+package logic
 
 import (
 	"bytes"
@@ -6,10 +6,11 @@ import (
 	"mime/multipart"
 	"os"
 
+	"github.com/kamijoucen/notesync/internal/ctx"
 	"github.com/kamijoucen/notesync/pkg/definition"
 )
 
-func PushFile(fNode *definition.FileTreeNode) error {
+func PushFile(clientCtx *ctx.ClientContext, fNode *definition.FileTreeNode) error {
 	file, err := os.Open(fNode.Name)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package scanner
+package client
 
 import (
 	"context"
@@ -38,5 +38,7 @@ func scanFile(clientCtx *ctx.ClientContext) error {
 
 // syncFile 同步文件
 func syncFile(clientCtx *ctx.ClientContext, f *definition.FileTreeNode) error {
+
+
 	return nil
 }

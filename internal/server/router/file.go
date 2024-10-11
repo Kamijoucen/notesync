@@ -7,7 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/kamijoucen/notesync/internal/ctx"
-	"github.com/kamijoucen/notesync/internal/services"
+	"github.com/kamijoucen/notesync/internal/server/logic"
 	"github.com/kamijoucen/notesync/pkg/definition"
 )
 
@@ -37,7 +37,7 @@ func FileUpload(serverCtx *ctx.ServerContext) func(c echo.Context) error {
 			return errors.New("path is empty")
 		}
 		reqCtx := ctx.NewRequestContext(serverCtx, c)
-		return services.StoreFile(reqCtx, &definition.FileSource{
+		return logic.StoreFile(reqCtx, &definition.FileSource{
 			Path:   path,
 			Name:   fromfile.Filename,
 			Reader: src,
