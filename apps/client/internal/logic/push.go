@@ -6,7 +6,7 @@ import (
 	"mime/multipart"
 	"os"
 
-	"github.com/kamijoucen/notesync/internal/ctx"
+	"github.com/kamijoucen/notesync/apps/client/internal/ctx"
 	"github.com/kamijoucen/notesync/pkg/definition"
 )
 

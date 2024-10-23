@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/kamijoucen/notesync/internal/ctx"
+	"github.com/kamijoucen/notesync/apps/server/internal/ctx"
 	"github.com/kamijoucen/notesync/pkg/definition"
 )
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/kamijoucen/notesync/internal/ctx"
-	"github.com/kamijoucen/notesync/internal/server/logic"
+	"github.com/kamijoucen/notesync/apps/server/internal/ctx"
+	"github.com/kamijoucen/notesync/apps/server/internal/logic"
 	"github.com/kamijoucen/notesync/pkg/definition"
 )
 

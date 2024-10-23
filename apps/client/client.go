@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kamijoucen/notesync/internal/ctx"
+	"github.com/kamijoucen/notesync/apps/client/internal/ctx"
 	"github.com/kamijoucen/notesync/pkg/common"
 	"github.com/kamijoucen/notesync/pkg/definition"
 )
@@ -38,7 +38,6 @@ func scanFile(clientCtx *ctx.ClientContext) error {
 
 // syncFile 同步文件
 func syncFile(clientCtx *ctx.ClientContext, f *definition.FileTreeNode) error {
-
 
 	return nil
 }

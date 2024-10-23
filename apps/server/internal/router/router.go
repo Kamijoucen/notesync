@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/kamijoucen/notesync/internal/ctx"
+	"github.com/kamijoucen/notesync/apps/server/internal/ctx"
 	"github.com/kamijoucen/notesync/pkg/config"
 	"github.com/labstack/echo/v4"
 )
