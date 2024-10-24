@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kamijoucen/notesync/pkg/ent"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent"
 )
 
 // The RepositoryFunc type is an adapter to allow the use of ordinary

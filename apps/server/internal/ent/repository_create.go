@@ -6,12 +6,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/kamijoucen/notesync/pkg/ent/repository"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
 
 // RepositoryCreate is the builder for creating a Repository entity.
@@ -22,58 +21,6 @@ type RepositoryCreate struct {
 	conflict []sql.ConflictOption
 }
 
-// SetName sets the "name" field.
-func (rc *RepositoryCreate) SetName(s string) *RepositoryCreate {
-	rc.mutation.SetName(s)
-	return rc
-}
-
-// SetDescription sets the "description" field.
-func (rc *RepositoryCreate) SetDescription(s string) *RepositoryCreate {
-	rc.mutation.SetDescription(s)
-	return rc
-}
-
-// SetPath sets the "path" field.
-func (rc *RepositoryCreate) SetPath(s string) *RepositoryCreate {
-	rc.mutation.SetPath(s)
-	return rc
-}
-
-// SetSize sets the "size" field.
-func (rc *RepositoryCreate) SetSize(i int) *RepositoryCreate {
-	rc.mutation.SetSize(i)
-	return rc
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (rc *RepositoryCreate) SetCreatedAt(t time.Time) *RepositoryCreate {
-	rc.mutation.SetCreatedAt(t)
-	return rc
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (rc *RepositoryCreate) SetNillableCreatedAt(t *time.Time) *RepositoryCreate {
-	if t != nil {
-		rc.SetCreatedAt(*t)
-	}
-	return rc
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (rc *RepositoryCreate) SetUpdatedAt(t time.Time) *RepositoryCreate {
-	rc.mutation.SetUpdatedAt(t)
-	return rc
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (rc *RepositoryCreate) SetNillableUpdatedAt(t *time.Time) *RepositoryCreate {
-	if t != nil {
-		rc.SetUpdatedAt(*t)
-	}
-	return rc
-}
-
 // Mutation returns the RepositoryMutation object of the builder.
 func (rc *RepositoryCreate) Mutation() *RepositoryMutation {
 	return rc.mutation
@@ -81,7 +28,6 @@ func (rc *RepositoryCreate) Mutation() *RepositoryMutation {
 
 // Save creates the Repository in the database.
 func (rc *RepositoryCreate) Save(ctx context.Context) (*Repository, error) {
-	rc.defaults()
 	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
@@ -107,38 +53,8 @@ func (rc *RepositoryCreate) ExecX(ctx context.Context) {
 	}
 }
 
-// defaults sets the default values of the builder before save.
-func (rc *RepositoryCreate) defaults() {
-	if _, ok := rc.mutation.CreatedAt(); !ok {
-		v := repository.DefaultCreatedAt()
-		rc.mutation.SetCreatedAt(v)
-	}
-	if _, ok := rc.mutation.UpdatedAt(); !ok {
-		v := repository.DefaultUpdatedAt()
-		rc.mutation.SetUpdatedAt(v)
-	}
-}
-
 // check runs all checks and user-defined validators on the builder.
 func (rc *RepositoryCreate) check() error {
-	if _, ok := rc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Repository.name"`)}
-	}
-	if _, ok := rc.mutation.Description(); !ok {
-		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Repository.description"`)}
-	}
-	if _, ok := rc.mutation.Path(); !ok {
-		return &ValidationError{Name: "path", err: errors.New(`ent: missing required field "Repository.path"`)}
-	}
-	if _, ok := rc.mutation.Size(); !ok {
-		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "Repository.size"`)}
-	}
-	if _, ok := rc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Repository.created_at"`)}
-	}
-	if _, ok := rc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Repository.updated_at"`)}
-	}
 	return nil
 }
 
@@ -166,30 +82,6 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(repository.Table, sqlgraph.NewFieldSpec(repository.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = rc.conflict
-	if value, ok := rc.mutation.Name(); ok {
-		_spec.SetField(repository.FieldName, field.TypeString, value)
-		_node.Name = value
-	}
-	if value, ok := rc.mutation.Description(); ok {
-		_spec.SetField(repository.FieldDescription, field.TypeString, value)
-		_node.Description = value
-	}
-	if value, ok := rc.mutation.Path(); ok {
-		_spec.SetField(repository.FieldPath, field.TypeString, value)
-		_node.Path = value
-	}
-	if value, ok := rc.mutation.Size(); ok {
-		_spec.SetField(repository.FieldSize, field.TypeInt, value)
-		_node.Size = value
-	}
-	if value, ok := rc.mutation.CreatedAt(); ok {
-		_spec.SetField(repository.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := rc.mutation.UpdatedAt(); ok {
-		_spec.SetField(repository.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
 	return _node, _spec
 }
 
@@ -197,17 +89,11 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.Repository.Create().
-//		SetName(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.RepositoryUpsert) {
-//			SetName(v+v).
-//		}).
 //		Exec(ctx)
 func (rc *RepositoryCreate) OnConflict(opts ...sql.ConflictOption) *RepositoryUpsertOne {
 	rc.conflict = opts
@@ -242,72 +128,6 @@ type (
 	}
 )
 
-// SetName sets the "name" field.
-func (u *RepositoryUpsert) SetName(v string) *RepositoryUpsert {
-	u.Set(repository.FieldName, v)
-	return u
-}
-
-// UpdateName sets the "name" field to the value that was provided on create.
-func (u *RepositoryUpsert) UpdateName() *RepositoryUpsert {
-	u.SetExcluded(repository.FieldName)
-	return u
-}
-
-// SetDescription sets the "description" field.
-func (u *RepositoryUpsert) SetDescription(v string) *RepositoryUpsert {
-	u.Set(repository.FieldDescription, v)
-	return u
-}
-
-// UpdateDescription sets the "description" field to the value that was provided on create.
-func (u *RepositoryUpsert) UpdateDescription() *RepositoryUpsert {
-	u.SetExcluded(repository.FieldDescription)
-	return u
-}
-
-// SetPath sets the "path" field.
-func (u *RepositoryUpsert) SetPath(v string) *RepositoryUpsert {
-	u.Set(repository.FieldPath, v)
-	return u
-}
-
-// UpdatePath sets the "path" field to the value that was provided on create.
-func (u *RepositoryUpsert) UpdatePath() *RepositoryUpsert {
-	u.SetExcluded(repository.FieldPath)
-	return u
-}
-
-// SetSize sets the "size" field.
-func (u *RepositoryUpsert) SetSize(v int) *RepositoryUpsert {
-	u.Set(repository.FieldSize, v)
-	return u
-}
-
-// UpdateSize sets the "size" field to the value that was provided on create.
-func (u *RepositoryUpsert) UpdateSize() *RepositoryUpsert {
-	u.SetExcluded(repository.FieldSize)
-	return u
-}
-
-// AddSize adds v to the "size" field.
-func (u *RepositoryUpsert) AddSize(v int) *RepositoryUpsert {
-	u.Add(repository.FieldSize, v)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *RepositoryUpsert) SetUpdatedAt(v time.Time) *RepositoryUpsert {
-	u.Set(repository.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *RepositoryUpsert) UpdateUpdatedAt() *RepositoryUpsert {
-	u.SetExcluded(repository.FieldUpdatedAt)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -318,11 +138,6 @@ func (u *RepositoryUpsert) UpdateUpdatedAt() *RepositoryUpsert {
 //		Exec(ctx)
 func (u *RepositoryUpsertOne) UpdateNewValues() *RepositoryUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(repository.FieldCreatedAt)
-		}
-	}))
 	return u
 }
 
@@ -351,83 +166,6 @@ func (u *RepositoryUpsertOne) Update(set func(*RepositoryUpsert)) *RepositoryUps
 		set(&RepositoryUpsert{UpdateSet: update})
 	}))
 	return u
-}
-
-// SetName sets the "name" field.
-func (u *RepositoryUpsertOne) SetName(v string) *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetName(v)
-	})
-}
-
-// UpdateName sets the "name" field to the value that was provided on create.
-func (u *RepositoryUpsertOne) UpdateName() *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateName()
-	})
-}
-
-// SetDescription sets the "description" field.
-func (u *RepositoryUpsertOne) SetDescription(v string) *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetDescription(v)
-	})
-}
-
-// UpdateDescription sets the "description" field to the value that was provided on create.
-func (u *RepositoryUpsertOne) UpdateDescription() *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateDescription()
-	})
-}
-
-// SetPath sets the "path" field.
-func (u *RepositoryUpsertOne) SetPath(v string) *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetPath(v)
-	})
-}
-
-// UpdatePath sets the "path" field to the value that was provided on create.
-func (u *RepositoryUpsertOne) UpdatePath() *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdatePath()
-	})
-}
-
-// SetSize sets the "size" field.
-func (u *RepositoryUpsertOne) SetSize(v int) *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetSize(v)
-	})
-}
-
-// AddSize adds v to the "size" field.
-func (u *RepositoryUpsertOne) AddSize(v int) *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.AddSize(v)
-	})
-}
-
-// UpdateSize sets the "size" field to the value that was provided on create.
-func (u *RepositoryUpsertOne) UpdateSize() *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateSize()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *RepositoryUpsertOne) SetUpdatedAt(v time.Time) *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *RepositoryUpsertOne) UpdateUpdatedAt() *RepositoryUpsertOne {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateUpdatedAt()
-	})
 }
 
 // Exec executes the query.
@@ -482,7 +220,6 @@ func (rcb *RepositoryCreateBulk) Save(ctx context.Context) ([]*Repository, error
 	for i := range rcb.builders {
 		func(i int, root context.Context) {
 			builder := rcb.builders[i]
-			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*RepositoryMutation)
 				if !ok {
@@ -562,11 +299,6 @@ func (rcb *RepositoryCreateBulk) ExecX(ctx context.Context) {
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
-//		// Override some of the fields with custom
-//		// update values.
-//		Update(func(u *ent.RepositoryUpsert) {
-//			SetName(v+v).
-//		}).
 //		Exec(ctx)
 func (rcb *RepositoryCreateBulk) OnConflict(opts ...sql.ConflictOption) *RepositoryUpsertBulk {
 	rcb.conflict = opts
@@ -604,13 +336,6 @@ type RepositoryUpsertBulk struct {
 //		Exec(ctx)
 func (u *RepositoryUpsertBulk) UpdateNewValues() *RepositoryUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
-	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
-		for _, b := range u.create.builders {
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(repository.FieldCreatedAt)
-			}
-		}
-	}))
 	return u
 }
 
@@ -639,83 +364,6 @@ func (u *RepositoryUpsertBulk) Update(set func(*RepositoryUpsert)) *RepositoryUp
 		set(&RepositoryUpsert{UpdateSet: update})
 	}))
 	return u
-}
-
-// SetName sets the "name" field.
-func (u *RepositoryUpsertBulk) SetName(v string) *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetName(v)
-	})
-}
-
-// UpdateName sets the "name" field to the value that was provided on create.
-func (u *RepositoryUpsertBulk) UpdateName() *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateName()
-	})
-}
-
-// SetDescription sets the "description" field.
-func (u *RepositoryUpsertBulk) SetDescription(v string) *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetDescription(v)
-	})
-}
-
-// UpdateDescription sets the "description" field to the value that was provided on create.
-func (u *RepositoryUpsertBulk) UpdateDescription() *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateDescription()
-	})
-}
-
-// SetPath sets the "path" field.
-func (u *RepositoryUpsertBulk) SetPath(v string) *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetPath(v)
-	})
-}
-
-// UpdatePath sets the "path" field to the value that was provided on create.
-func (u *RepositoryUpsertBulk) UpdatePath() *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdatePath()
-	})
-}
-
-// SetSize sets the "size" field.
-func (u *RepositoryUpsertBulk) SetSize(v int) *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetSize(v)
-	})
-}
-
-// AddSize adds v to the "size" field.
-func (u *RepositoryUpsertBulk) AddSize(v int) *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.AddSize(v)
-	})
-}
-
-// UpdateSize sets the "size" field to the value that was provided on create.
-func (u *RepositoryUpsertBulk) UpdateSize() *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateSize()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *RepositoryUpsertBulk) SetUpdatedAt(v time.Time) *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *RepositoryUpsertBulk) UpdateUpdatedAt() *RepositoryUpsertBulk {
-	return u.Update(func(s *RepositoryUpsert) {
-		s.UpdateUpdatedAt()
-	})
 }
 
 // Exec executes the query.

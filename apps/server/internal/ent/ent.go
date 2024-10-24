@@ -12,7 +12,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
-	"github.com/kamijoucen/notesync/pkg/ent/repository"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
 
 // ent aliases to avoid import conflicts in user's code.

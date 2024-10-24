@@ -5,12 +5,12 @@ package enttest
 import (
 	"context"
 
-	"github.com/kamijoucen/notesync/pkg/ent"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent"
 	// required by schema hooks.
-	_ "github.com/kamijoucen/notesync/pkg/ent/runtime"
+	_ "github.com/kamijoucen/notesync/apps/server/internal/ent/runtime"
 
 	"entgo.io/ent/dialect/sql/schema"
-	"github.com/kamijoucen/notesync/pkg/ent/migrate"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/migrate"
 )
 
 type (

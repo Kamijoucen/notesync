@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "go run -mod=mod entgo.io/ent/cmd/ent new ${input:modelName}",
             "options": {
-                "cwd": "${workspaceFolder}/pkg"
+                "cwd": "${workspaceFolder}/apps/server/internal"
             },
             "group": {
                 "kind": "build",
@@ -20,7 +20,7 @@
             "type": "shell",
             "command": "go run -mod=mod entgo.io/ent/cmd/ent generate --feature sql/upsert ./ent/schema",
             "options": {
-                "cwd": "${workspaceFolder}/pkg"
+                "cwd": "${workspaceFolder}/apps/server/internal"
             },
             "group": {
                 "kind": "build",

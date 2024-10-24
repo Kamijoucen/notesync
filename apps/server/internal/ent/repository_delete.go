@@ -8,8 +8,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"github.com/kamijoucen/notesync/pkg/ent/predicate"
-	"github.com/kamijoucen/notesync/pkg/ent/repository"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/predicate"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
 
 // RepositoryDelete is the builder for deleting a Repository entity.

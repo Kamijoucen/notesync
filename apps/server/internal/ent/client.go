@@ -9,12 +9,12 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/kamijoucen/notesync/pkg/ent/migrate"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/migrate"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
-	"github.com/kamijoucen/notesync/pkg/ent/repository"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
 
 // Client is the client that holds all ent builders.

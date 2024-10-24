@@ -5,9 +5,9 @@ import (
 	"log"
 
 	"entgo.io/ent/dialect"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/migrate"
 	"github.com/kamijoucen/notesync/pkg/config"
-	"github.com/kamijoucen/notesync/pkg/ent"
-	"github.com/kamijoucen/notesync/pkg/ent/migrate"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -28,7 +28,7 @@ func NewServerContext(cfg *config.ServerConfig) *ServerContext {
 // initDB
 func (s *ServerContext) initDB() {
 	// client, err := ent.Open(dialect.SQLite, "file:ent?mode=memory&cache=shared&_fk=1")
-	client, err := ent.Open(dialect.SQLite, "./data.db")
+	client, err := ent.Open(dialect.SQLite, "./data.db?_fk=1")
 	if err != nil {
 		log.Fatalf("failed opening connection to sqlite: %v", err)
 		panic(err)
