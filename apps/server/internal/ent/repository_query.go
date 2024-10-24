@@ -258,6 +258,18 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Name string `json:"name,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Repository.Query().
+//		GroupBy(repository.FieldName).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGroupBy {
 	rq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &RepositoryGroupBy{build: rq}
@@ -269,6 +281,16 @@ func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGr
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Name string `json:"name,omitempty"`
+//	}
+//
+//	client.Repository.Query().
+//		Select(repository.FieldName).
+//		Scan(ctx, &v)
 func (rq *RepositoryQuery) Select(fields ...string) *RepositorySelect {
 	rq.ctx.Fields = append(rq.ctx.Fields, fields...)
 	sbuild := &RepositorySelect{RepositoryQuery: rq}

@@ -13,7 +13,10 @@ import (
 
 // SyncRepoMeta 创建仓库元数据
 func SyncRepoMeta(serverCtx *ctx.ServerContext) func(c echo.Context) error {
-	return nil
+	return func(c echo.Context) error {
+		
+		return nil
+	}
 }
 
 // FileUpload 上传单个文件

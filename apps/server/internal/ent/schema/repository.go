@@ -1,6 +1,9 @@
 package schema
 
-import "entgo.io/ent"
+import (
+	"entgo.io/ent"
+	"entgo.io/ent/schema/field"
+)
 
 // Repository holds the schema definition for the Repository entity.
 type Repository struct {
@@ -9,7 +12,10 @@ type Repository struct {
 
 // Fields of the Repository.
 func (Repository) Fields() []ent.Field {
-	return nil
+	return []ent.Field{
+		field.String("name"),
+		field.String("description"),
+	}
 }
 
 // Edges of the Repository.

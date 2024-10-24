@@ -8,5 +8,6 @@ import (
 
 func Init(e *echo.Echo, cfg *config.ServerConfig) {
 	serverCtx := ctx.NewServerContext(cfg)
+
 	e.POST("/upload", FileUpload(serverCtx))
 }

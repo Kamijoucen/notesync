@@ -27,6 +27,34 @@ func (ru *RepositoryUpdate) Where(ps ...predicate.Repository) *RepositoryUpdate 
 	return ru
 }
 
+// SetName sets the "name" field.
+func (ru *RepositoryUpdate) SetName(s string) *RepositoryUpdate {
+	ru.mutation.SetName(s)
+	return ru
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ru *RepositoryUpdate) SetNillableName(s *string) *RepositoryUpdate {
+	if s != nil {
+		ru.SetName(*s)
+	}
+	return ru
+}
+
+// SetDescription sets the "description" field.
+func (ru *RepositoryUpdate) SetDescription(s string) *RepositoryUpdate {
+	ru.mutation.SetDescription(s)
+	return ru
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (ru *RepositoryUpdate) SetNillableDescription(s *string) *RepositoryUpdate {
+	if s != nil {
+		ru.SetDescription(*s)
+	}
+	return ru
+}
+
 // Mutation returns the RepositoryMutation object of the builder.
 func (ru *RepositoryUpdate) Mutation() *RepositoryMutation {
 	return ru.mutation
@@ -68,6 +96,12 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := ru.mutation.Name(); ok {
+		_spec.SetField(repository.FieldName, field.TypeString, value)
+	}
+	if value, ok := ru.mutation.Description(); ok {
+		_spec.SetField(repository.FieldDescription, field.TypeString, value)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ru.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{repository.Label}
@@ -86,6 +120,34 @@ type RepositoryUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *RepositoryMutation
+}
+
+// SetName sets the "name" field.
+func (ruo *RepositoryUpdateOne) SetName(s string) *RepositoryUpdateOne {
+	ruo.mutation.SetName(s)
+	return ruo
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (ruo *RepositoryUpdateOne) SetNillableName(s *string) *RepositoryUpdateOne {
+	if s != nil {
+		ruo.SetName(*s)
+	}
+	return ruo
+}
+
+// SetDescription sets the "description" field.
+func (ruo *RepositoryUpdateOne) SetDescription(s string) *RepositoryUpdateOne {
+	ruo.mutation.SetDescription(s)
+	return ruo
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (ruo *RepositoryUpdateOne) SetNillableDescription(s *string) *RepositoryUpdateOne {
+	if s != nil {
+		ruo.SetDescription(*s)
+	}
+	return ruo
 }
 
 // Mutation returns the RepositoryMutation object of the builder.
@@ -158,6 +220,12 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := ruo.mutation.Name(); ok {
+		_spec.SetField(repository.FieldName, field.TypeString, value)
+	}
+	if value, ok := ruo.mutation.Description(); ok {
+		_spec.SetField(repository.FieldDescription, field.TypeString, value)
 	}
 	_node = &Repository{config: ruo.config}
 	_spec.Assign = _node.assignValues

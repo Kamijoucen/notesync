@@ -21,6 +21,18 @@ type RepositoryCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetName sets the "name" field.
+func (rc *RepositoryCreate) SetName(s string) *RepositoryCreate {
+	rc.mutation.SetName(s)
+	return rc
+}
+
+// SetDescription sets the "description" field.
+func (rc *RepositoryCreate) SetDescription(s string) *RepositoryCreate {
+	rc.mutation.SetDescription(s)
+	return rc
+}
+
 // Mutation returns the RepositoryMutation object of the builder.
 func (rc *RepositoryCreate) Mutation() *RepositoryMutation {
 	return rc.mutation
@@ -55,6 +67,12 @@ func (rc *RepositoryCreate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (rc *RepositoryCreate) check() error {
+	if _, ok := rc.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Repository.name"`)}
+	}
+	if _, ok := rc.mutation.Description(); !ok {
+		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Repository.description"`)}
+	}
 	return nil
 }
 
@@ -82,6 +100,14 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(repository.Table, sqlgraph.NewFieldSpec(repository.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = rc.conflict
+	if value, ok := rc.mutation.Name(); ok {
+		_spec.SetField(repository.FieldName, field.TypeString, value)
+		_node.Name = value
+	}
+	if value, ok := rc.mutation.Description(); ok {
+		_spec.SetField(repository.FieldDescription, field.TypeString, value)
+		_node.Description = value
+	}
 	return _node, _spec
 }
 
@@ -89,11 +115,17 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.Repository.Create().
+//		SetName(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.RepositoryUpsert) {
+//			SetName(v+v).
+//		}).
 //		Exec(ctx)
 func (rc *RepositoryCreate) OnConflict(opts ...sql.ConflictOption) *RepositoryUpsertOne {
 	rc.conflict = opts
@@ -127,6 +159,30 @@ type (
 		*sql.UpdateSet
 	}
 )
+
+// SetName sets the "name" field.
+func (u *RepositoryUpsert) SetName(v string) *RepositoryUpsert {
+	u.Set(repository.FieldName, v)
+	return u
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *RepositoryUpsert) UpdateName() *RepositoryUpsert {
+	u.SetExcluded(repository.FieldName)
+	return u
+}
+
+// SetDescription sets the "description" field.
+func (u *RepositoryUpsert) SetDescription(v string) *RepositoryUpsert {
+	u.Set(repository.FieldDescription, v)
+	return u
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *RepositoryUpsert) UpdateDescription() *RepositoryUpsert {
+	u.SetExcluded(repository.FieldDescription)
+	return u
+}
 
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
@@ -166,6 +222,34 @@ func (u *RepositoryUpsertOne) Update(set func(*RepositoryUpsert)) *RepositoryUps
 		set(&RepositoryUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetName sets the "name" field.
+func (u *RepositoryUpsertOne) SetName(v string) *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *RepositoryUpsertOne) UpdateName() *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *RepositoryUpsertOne) SetDescription(v string) *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *RepositoryUpsertOne) UpdateDescription() *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdateDescription()
+	})
 }
 
 // Exec executes the query.
@@ -299,6 +383,11 @@ func (rcb *RepositoryCreateBulk) ExecX(ctx context.Context) {
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.RepositoryUpsert) {
+//			SetName(v+v).
+//		}).
 //		Exec(ctx)
 func (rcb *RepositoryCreateBulk) OnConflict(opts ...sql.ConflictOption) *RepositoryUpsertBulk {
 	rcb.conflict = opts
@@ -364,6 +453,34 @@ func (u *RepositoryUpsertBulk) Update(set func(*RepositoryUpsert)) *RepositoryUp
 		set(&RepositoryUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetName sets the "name" field.
+func (u *RepositoryUpsertBulk) SetName(v string) *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetName(v)
+	})
+}
+
+// UpdateName sets the "name" field to the value that was provided on create.
+func (u *RepositoryUpsertBulk) UpdateName() *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdateName()
+	})
+}
+
+// SetDescription sets the "description" field.
+func (u *RepositoryUpsertBulk) SetDescription(v string) *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetDescription(v)
+	})
+}
+
+// UpdateDescription sets the "description" field to the value that was provided on create.
+func (u *RepositoryUpsertBulk) UpdateDescription() *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdateDescription()
+	})
 }
 
 // Exec executes the query.
