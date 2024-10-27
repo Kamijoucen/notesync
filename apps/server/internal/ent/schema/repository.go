@@ -15,6 +15,7 @@ func (Repository) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name"),
 		field.String("description"),
+		field.Bytes("public_key"),
 	}
 }
 
