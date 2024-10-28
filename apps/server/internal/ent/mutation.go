@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/fileitem"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/predicate"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
@@ -23,8 +25,762 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeFileItem   = "FileItem"
 	TypeRepository = "Repository"
 )
+
+// FileItemMutation represents an operation that mutates the FileItem nodes in the graph.
+type FileItemMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *int
+	create_time       *time.Time
+	update_time       *time.Time
+	name              *string
+	hash              *string
+	is_dir            *bool
+	clearedFields     map[string]struct{}
+	repository        *int
+	clearedrepository bool
+	parent            *int
+	clearedparent     bool
+	children          map[int]struct{}
+	removedchildren   map[int]struct{}
+	clearedchildren   bool
+	done              bool
+	oldValue          func(context.Context) (*FileItem, error)
+	predicates        []predicate.FileItem
+}
+
+var _ ent.Mutation = (*FileItemMutation)(nil)
+
+// fileitemOption allows management of the mutation configuration using functional options.
+type fileitemOption func(*FileItemMutation)
+
+// newFileItemMutation creates new mutation for the FileItem entity.
+func newFileItemMutation(c config, op Op, opts ...fileitemOption) *FileItemMutation {
+	m := &FileItemMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeFileItem,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withFileItemID sets the ID field of the mutation.
+func withFileItemID(id int) fileitemOption {
+	return func(m *FileItemMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *FileItem
+		)
+		m.oldValue = func(ctx context.Context) (*FileItem, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().FileItem.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withFileItem sets the old FileItem of the mutation.
+func withFileItem(node *FileItem) fileitemOption {
+	return func(m *FileItemMutation) {
+		m.oldValue = func(context.Context) (*FileItem, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m FileItemMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m FileItemMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *FileItemMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *FileItemMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().FileItem.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *FileItemMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *FileItemMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the FileItem entity.
+// If the FileItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileItemMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *FileItemMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *FileItemMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *FileItemMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the FileItem entity.
+// If the FileItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileItemMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *FileItemMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetName sets the "name" field.
+func (m *FileItemMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *FileItemMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the FileItem entity.
+// If the FileItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileItemMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *FileItemMutation) ResetName() {
+	m.name = nil
+}
+
+// SetHash sets the "hash" field.
+func (m *FileItemMutation) SetHash(s string) {
+	m.hash = &s
+}
+
+// Hash returns the value of the "hash" field in the mutation.
+func (m *FileItemMutation) Hash() (r string, exists bool) {
+	v := m.hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHash returns the old "hash" field's value of the FileItem entity.
+// If the FileItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileItemMutation) OldHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHash: %w", err)
+	}
+	return oldValue.Hash, nil
+}
+
+// ResetHash resets all changes to the "hash" field.
+func (m *FileItemMutation) ResetHash() {
+	m.hash = nil
+}
+
+// SetIsDir sets the "is_dir" field.
+func (m *FileItemMutation) SetIsDir(b bool) {
+	m.is_dir = &b
+}
+
+// IsDir returns the value of the "is_dir" field in the mutation.
+func (m *FileItemMutation) IsDir() (r bool, exists bool) {
+	v := m.is_dir
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsDir returns the old "is_dir" field's value of the FileItem entity.
+// If the FileItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FileItemMutation) OldIsDir(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsDir is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsDir requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsDir: %w", err)
+	}
+	return oldValue.IsDir, nil
+}
+
+// ResetIsDir resets all changes to the "is_dir" field.
+func (m *FileItemMutation) ResetIsDir() {
+	m.is_dir = nil
+}
+
+// SetRepositoryID sets the "repository" edge to the Repository entity by id.
+func (m *FileItemMutation) SetRepositoryID(id int) {
+	m.repository = &id
+}
+
+// ClearRepository clears the "repository" edge to the Repository entity.
+func (m *FileItemMutation) ClearRepository() {
+	m.clearedrepository = true
+}
+
+// RepositoryCleared reports if the "repository" edge to the Repository entity was cleared.
+func (m *FileItemMutation) RepositoryCleared() bool {
+	return m.clearedrepository
+}
+
+// RepositoryID returns the "repository" edge ID in the mutation.
+func (m *FileItemMutation) RepositoryID() (id int, exists bool) {
+	if m.repository != nil {
+		return *m.repository, true
+	}
+	return
+}
+
+// RepositoryIDs returns the "repository" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// RepositoryID instead. It exists only for internal usage by the builders.
+func (m *FileItemMutation) RepositoryIDs() (ids []int) {
+	if id := m.repository; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRepository resets all changes to the "repository" edge.
+func (m *FileItemMutation) ResetRepository() {
+	m.repository = nil
+	m.clearedrepository = false
+}
+
+// SetParentID sets the "parent" edge to the FileItem entity by id.
+func (m *FileItemMutation) SetParentID(id int) {
+	m.parent = &id
+}
+
+// ClearParent clears the "parent" edge to the FileItem entity.
+func (m *FileItemMutation) ClearParent() {
+	m.clearedparent = true
+}
+
+// ParentCleared reports if the "parent" edge to the FileItem entity was cleared.
+func (m *FileItemMutation) ParentCleared() bool {
+	return m.clearedparent
+}
+
+// ParentID returns the "parent" edge ID in the mutation.
+func (m *FileItemMutation) ParentID() (id int, exists bool) {
+	if m.parent != nil {
+		return *m.parent, true
+	}
+	return
+}
+
+// ParentIDs returns the "parent" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ParentID instead. It exists only for internal usage by the builders.
+func (m *FileItemMutation) ParentIDs() (ids []int) {
+	if id := m.parent; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetParent resets all changes to the "parent" edge.
+func (m *FileItemMutation) ResetParent() {
+	m.parent = nil
+	m.clearedparent = false
+}
+
+// AddChildIDs adds the "children" edge to the FileItem entity by ids.
+func (m *FileItemMutation) AddChildIDs(ids ...int) {
+	if m.children == nil {
+		m.children = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.children[ids[i]] = struct{}{}
+	}
+}
+
+// ClearChildren clears the "children" edge to the FileItem entity.
+func (m *FileItemMutation) ClearChildren() {
+	m.clearedchildren = true
+}
+
+// ChildrenCleared reports if the "children" edge to the FileItem entity was cleared.
+func (m *FileItemMutation) ChildrenCleared() bool {
+	return m.clearedchildren
+}
+
+// RemoveChildIDs removes the "children" edge to the FileItem entity by IDs.
+func (m *FileItemMutation) RemoveChildIDs(ids ...int) {
+	if m.removedchildren == nil {
+		m.removedchildren = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.children, ids[i])
+		m.removedchildren[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedChildren returns the removed IDs of the "children" edge to the FileItem entity.
+func (m *FileItemMutation) RemovedChildrenIDs() (ids []int) {
+	for id := range m.removedchildren {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ChildrenIDs returns the "children" edge IDs in the mutation.
+func (m *FileItemMutation) ChildrenIDs() (ids []int) {
+	for id := range m.children {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetChildren resets all changes to the "children" edge.
+func (m *FileItemMutation) ResetChildren() {
+	m.children = nil
+	m.clearedchildren = false
+	m.removedchildren = nil
+}
+
+// Where appends a list predicates to the FileItemMutation builder.
+func (m *FileItemMutation) Where(ps ...predicate.FileItem) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the FileItemMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *FileItemMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.FileItem, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *FileItemMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *FileItemMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (FileItem).
+func (m *FileItemMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *FileItemMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.create_time != nil {
+		fields = append(fields, fileitem.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, fileitem.FieldUpdateTime)
+	}
+	if m.name != nil {
+		fields = append(fields, fileitem.FieldName)
+	}
+	if m.hash != nil {
+		fields = append(fields, fileitem.FieldHash)
+	}
+	if m.is_dir != nil {
+		fields = append(fields, fileitem.FieldIsDir)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *FileItemMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case fileitem.FieldCreateTime:
+		return m.CreateTime()
+	case fileitem.FieldUpdateTime:
+		return m.UpdateTime()
+	case fileitem.FieldName:
+		return m.Name()
+	case fileitem.FieldHash:
+		return m.Hash()
+	case fileitem.FieldIsDir:
+		return m.IsDir()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *FileItemMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case fileitem.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case fileitem.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case fileitem.FieldName:
+		return m.OldName(ctx)
+	case fileitem.FieldHash:
+		return m.OldHash(ctx)
+	case fileitem.FieldIsDir:
+		return m.OldIsDir(ctx)
+	}
+	return nil, fmt.Errorf("unknown FileItem field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *FileItemMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case fileitem.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case fileitem.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case fileitem.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case fileitem.FieldHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHash(v)
+		return nil
+	case fileitem.FieldIsDir:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsDir(v)
+		return nil
+	}
+	return fmt.Errorf("unknown FileItem field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *FileItemMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *FileItemMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *FileItemMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown FileItem numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *FileItemMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *FileItemMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *FileItemMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown FileItem nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *FileItemMutation) ResetField(name string) error {
+	switch name {
+	case fileitem.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case fileitem.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case fileitem.FieldName:
+		m.ResetName()
+		return nil
+	case fileitem.FieldHash:
+		m.ResetHash()
+		return nil
+	case fileitem.FieldIsDir:
+		m.ResetIsDir()
+		return nil
+	}
+	return fmt.Errorf("unknown FileItem field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *FileItemMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.repository != nil {
+		edges = append(edges, fileitem.EdgeRepository)
+	}
+	if m.parent != nil {
+		edges = append(edges, fileitem.EdgeParent)
+	}
+	if m.children != nil {
+		edges = append(edges, fileitem.EdgeChildren)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *FileItemMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case fileitem.EdgeRepository:
+		if id := m.repository; id != nil {
+			return []ent.Value{*id}
+		}
+	case fileitem.EdgeParent:
+		if id := m.parent; id != nil {
+			return []ent.Value{*id}
+		}
+	case fileitem.EdgeChildren:
+		ids := make([]ent.Value, 0, len(m.children))
+		for id := range m.children {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *FileItemMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.removedchildren != nil {
+		edges = append(edges, fileitem.EdgeChildren)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *FileItemMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case fileitem.EdgeChildren:
+		ids := make([]ent.Value, 0, len(m.removedchildren))
+		for id := range m.removedchildren {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *FileItemMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedrepository {
+		edges = append(edges, fileitem.EdgeRepository)
+	}
+	if m.clearedparent {
+		edges = append(edges, fileitem.EdgeParent)
+	}
+	if m.clearedchildren {
+		edges = append(edges, fileitem.EdgeChildren)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *FileItemMutation) EdgeCleared(name string) bool {
+	switch name {
+	case fileitem.EdgeRepository:
+		return m.clearedrepository
+	case fileitem.EdgeParent:
+		return m.clearedparent
+	case fileitem.EdgeChildren:
+		return m.clearedchildren
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *FileItemMutation) ClearEdge(name string) error {
+	switch name {
+	case fileitem.EdgeRepository:
+		m.ClearRepository()
+		return nil
+	case fileitem.EdgeParent:
+		m.ClearParent()
+		return nil
+	}
+	return fmt.Errorf("unknown FileItem unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *FileItemMutation) ResetEdge(name string) error {
+	switch name {
+	case fileitem.EdgeRepository:
+		m.ResetRepository()
+		return nil
+	case fileitem.EdgeParent:
+		m.ResetParent()
+		return nil
+	case fileitem.EdgeChildren:
+		m.ResetChildren()
+		return nil
+	}
+	return fmt.Errorf("unknown FileItem edge %s", name)
+}
 
 // RepositoryMutation represents an operation that mutates the Repository nodes in the graph.
 type RepositoryMutation struct {
@@ -32,9 +788,15 @@ type RepositoryMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	create_time   *time.Time
+	update_time   *time.Time
 	name          *string
 	description   *string
+	public_key    *[]byte
 	clearedFields map[string]struct{}
+	files         map[int]struct{}
+	removedfiles  map[int]struct{}
+	clearedfiles  bool
 	done          bool
 	oldValue      func(context.Context) (*Repository, error)
 	predicates    []predicate.Repository
@@ -138,6 +900,78 @@ func (m *RepositoryMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
+// SetCreateTime sets the "create_time" field.
+func (m *RepositoryMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *RepositoryMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the Repository entity.
+// If the Repository object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepositoryMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *RepositoryMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *RepositoryMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *RepositoryMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the Repository entity.
+// If the Repository object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepositoryMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *RepositoryMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
 // SetName sets the "name" field.
 func (m *RepositoryMutation) SetName(s string) {
 	m.name = &s
@@ -210,6 +1044,96 @@ func (m *RepositoryMutation) ResetDescription() {
 	m.description = nil
 }
 
+// SetPublicKey sets the "public_key" field.
+func (m *RepositoryMutation) SetPublicKey(b []byte) {
+	m.public_key = &b
+}
+
+// PublicKey returns the value of the "public_key" field in the mutation.
+func (m *RepositoryMutation) PublicKey() (r []byte, exists bool) {
+	v := m.public_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublicKey returns the old "public_key" field's value of the Repository entity.
+// If the Repository object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RepositoryMutation) OldPublicKey(ctx context.Context) (v []byte, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublicKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublicKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublicKey: %w", err)
+	}
+	return oldValue.PublicKey, nil
+}
+
+// ResetPublicKey resets all changes to the "public_key" field.
+func (m *RepositoryMutation) ResetPublicKey() {
+	m.public_key = nil
+}
+
+// AddFileIDs adds the "files" edge to the FileItem entity by ids.
+func (m *RepositoryMutation) AddFileIDs(ids ...int) {
+	if m.files == nil {
+		m.files = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.files[ids[i]] = struct{}{}
+	}
+}
+
+// ClearFiles clears the "files" edge to the FileItem entity.
+func (m *RepositoryMutation) ClearFiles() {
+	m.clearedfiles = true
+}
+
+// FilesCleared reports if the "files" edge to the FileItem entity was cleared.
+func (m *RepositoryMutation) FilesCleared() bool {
+	return m.clearedfiles
+}
+
+// RemoveFileIDs removes the "files" edge to the FileItem entity by IDs.
+func (m *RepositoryMutation) RemoveFileIDs(ids ...int) {
+	if m.removedfiles == nil {
+		m.removedfiles = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.files, ids[i])
+		m.removedfiles[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedFiles returns the removed IDs of the "files" edge to the FileItem entity.
+func (m *RepositoryMutation) RemovedFilesIDs() (ids []int) {
+	for id := range m.removedfiles {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// FilesIDs returns the "files" edge IDs in the mutation.
+func (m *RepositoryMutation) FilesIDs() (ids []int) {
+	for id := range m.files {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetFiles resets all changes to the "files" edge.
+func (m *RepositoryMutation) ResetFiles() {
+	m.files = nil
+	m.clearedfiles = false
+	m.removedfiles = nil
+}
+
 // Where appends a list predicates to the RepositoryMutation builder.
 func (m *RepositoryMutation) Where(ps ...predicate.Repository) {
 	m.predicates = append(m.predicates, ps...)
@@ -244,12 +1168,21 @@ func (m *RepositoryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RepositoryMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 5)
+	if m.create_time != nil {
+		fields = append(fields, repository.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, repository.FieldUpdateTime)
+	}
 	if m.name != nil {
 		fields = append(fields, repository.FieldName)
 	}
 	if m.description != nil {
 		fields = append(fields, repository.FieldDescription)
+	}
+	if m.public_key != nil {
+		fields = append(fields, repository.FieldPublicKey)
 	}
 	return fields
 }
@@ -259,10 +1192,16 @@ func (m *RepositoryMutation) Fields() []string {
 // schema.
 func (m *RepositoryMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case repository.FieldCreateTime:
+		return m.CreateTime()
+	case repository.FieldUpdateTime:
+		return m.UpdateTime()
 	case repository.FieldName:
 		return m.Name()
 	case repository.FieldDescription:
 		return m.Description()
+	case repository.FieldPublicKey:
+		return m.PublicKey()
 	}
 	return nil, false
 }
@@ -272,10 +1211,16 @@ func (m *RepositoryMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *RepositoryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case repository.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case repository.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
 	case repository.FieldName:
 		return m.OldName(ctx)
 	case repository.FieldDescription:
 		return m.OldDescription(ctx)
+	case repository.FieldPublicKey:
+		return m.OldPublicKey(ctx)
 	}
 	return nil, fmt.Errorf("unknown Repository field %s", name)
 }
@@ -285,6 +1230,20 @@ func (m *RepositoryMutation) OldField(ctx context.Context, name string) (ent.Val
 // type.
 func (m *RepositoryMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case repository.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case repository.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
 	case repository.FieldName:
 		v, ok := value.(string)
 		if !ok {
@@ -298,6 +1257,13 @@ func (m *RepositoryMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDescription(v)
+		return nil
+	case repository.FieldPublicKey:
+		v, ok := value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublicKey(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Repository field %s", name)
@@ -348,11 +1314,20 @@ func (m *RepositoryMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *RepositoryMutation) ResetField(name string) error {
 	switch name {
+	case repository.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case repository.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
 	case repository.FieldName:
 		m.ResetName()
 		return nil
 	case repository.FieldDescription:
 		m.ResetDescription()
+		return nil
+	case repository.FieldPublicKey:
+		m.ResetPublicKey()
 		return nil
 	}
 	return fmt.Errorf("unknown Repository field %s", name)
@@ -360,48 +1335,84 @@ func (m *RepositoryMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RepositoryMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.files != nil {
+		edges = append(edges, repository.EdgeFiles)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *RepositoryMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case repository.EdgeFiles:
+		ids := make([]ent.Value, 0, len(m.files))
+		for id := range m.files {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RepositoryMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedfiles != nil {
+		edges = append(edges, repository.EdgeFiles)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *RepositoryMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case repository.EdgeFiles:
+		ids := make([]ent.Value, 0, len(m.removedfiles))
+		for id := range m.removedfiles {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RepositoryMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedfiles {
+		edges = append(edges, repository.EdgeFiles)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *RepositoryMutation) EdgeCleared(name string) bool {
+	switch name {
+	case repository.EdgeFiles:
+		return m.clearedfiles
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *RepositoryMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Repository unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *RepositoryMutation) ResetEdge(name string) error {
+	switch name {
+	case repository.EdgeFiles:
+		m.ResetFiles()
+		return nil
+	}
 	return fmt.Errorf("unknown Repository edge %s", name)
 }

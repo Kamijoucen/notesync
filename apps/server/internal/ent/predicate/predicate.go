@@ -6,5 +6,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// FileItem is the predicate function for fileitem builders.
+type FileItem func(*sql.Selector)
+
 // Repository is the predicate function for repository builders.
 type Repository func(*sql.Selector)

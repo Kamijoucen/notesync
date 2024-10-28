@@ -8,11 +8,45 @@ import (
 )
 
 var (
+	// FileItemsColumns holds the columns for the "file_items" table.
+	FileItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "name", Type: field.TypeString},
+		{Name: "hash", Type: field.TypeString},
+		{Name: "is_dir", Type: field.TypeBool, Default: false},
+		{Name: "file_item_children", Type: field.TypeInt, Nullable: true},
+		{Name: "repository_files", Type: field.TypeInt, Nullable: true},
+	}
+	// FileItemsTable holds the schema information for the "file_items" table.
+	FileItemsTable = &schema.Table{
+		Name:       "file_items",
+		Columns:    FileItemsColumns,
+		PrimaryKey: []*schema.Column{FileItemsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "file_items_file_items_children",
+				Columns:    []*schema.Column{FileItemsColumns[6]},
+				RefColumns: []*schema.Column{FileItemsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "file_items_repositories_files",
+				Columns:    []*schema.Column{FileItemsColumns[7]},
+				RefColumns: []*schema.Column{RepositoriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// RepositoriesColumns holds the columns for the "repositories" table.
 	RepositoriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString},
+		{Name: "public_key", Type: field.TypeBytes},
 	}
 	// RepositoriesTable holds the schema information for the "repositories" table.
 	RepositoriesTable = &schema.Table{
@@ -22,9 +56,12 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		FileItemsTable,
 		RepositoriesTable,
 	}
 )
 
 func init() {
+	FileItemsTable.ForeignKeys[0].RefTable = FileItemsTable
+	FileItemsTable.ForeignKeys[1].RefTable = RepositoriesTable
 }

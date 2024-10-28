@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/fileitem"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
 
@@ -22,6 +24,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// FileItem is the client for interacting with the FileItem builders.
+	FileItem *FileItemClient
 	// Repository is the client for interacting with the Repository builders.
 	Repository *RepositoryClient
 }
@@ -35,6 +39,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.FileItem = NewFileItemClient(c.config)
 	c.Repository = NewRepositoryClient(c.config)
 }
 
@@ -128,6 +133,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:        ctx,
 		config:     cfg,
+		FileItem:   NewFileItemClient(cfg),
 		Repository: NewRepositoryClient(cfg),
 	}, nil
 }
@@ -148,6 +154,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:        ctx,
 		config:     cfg,
+		FileItem:   NewFileItemClient(cfg),
 		Repository: NewRepositoryClient(cfg),
 	}, nil
 }
@@ -155,7 +162,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Repository.
+//		FileItem.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -177,22 +184,207 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.FileItem.Use(hooks...)
 	c.Repository.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.FileItem.Intercept(interceptors...)
 	c.Repository.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *FileItemMutation:
+		return c.FileItem.mutate(ctx, m)
 	case *RepositoryMutation:
 		return c.Repository.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// FileItemClient is a client for the FileItem schema.
+type FileItemClient struct {
+	config
+}
+
+// NewFileItemClient returns a client for the FileItem from the given config.
+func NewFileItemClient(c config) *FileItemClient {
+	return &FileItemClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `fileitem.Hooks(f(g(h())))`.
+func (c *FileItemClient) Use(hooks ...Hook) {
+	c.hooks.FileItem = append(c.hooks.FileItem, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `fileitem.Intercept(f(g(h())))`.
+func (c *FileItemClient) Intercept(interceptors ...Interceptor) {
+	c.inters.FileItem = append(c.inters.FileItem, interceptors...)
+}
+
+// Create returns a builder for creating a FileItem entity.
+func (c *FileItemClient) Create() *FileItemCreate {
+	mutation := newFileItemMutation(c.config, OpCreate)
+	return &FileItemCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of FileItem entities.
+func (c *FileItemClient) CreateBulk(builders ...*FileItemCreate) *FileItemCreateBulk {
+	return &FileItemCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *FileItemClient) MapCreateBulk(slice any, setFunc func(*FileItemCreate, int)) *FileItemCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &FileItemCreateBulk{err: fmt.Errorf("calling to FileItemClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*FileItemCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &FileItemCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for FileItem.
+func (c *FileItemClient) Update() *FileItemUpdate {
+	mutation := newFileItemMutation(c.config, OpUpdate)
+	return &FileItemUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *FileItemClient) UpdateOne(fi *FileItem) *FileItemUpdateOne {
+	mutation := newFileItemMutation(c.config, OpUpdateOne, withFileItem(fi))
+	return &FileItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *FileItemClient) UpdateOneID(id int) *FileItemUpdateOne {
+	mutation := newFileItemMutation(c.config, OpUpdateOne, withFileItemID(id))
+	return &FileItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for FileItem.
+func (c *FileItemClient) Delete() *FileItemDelete {
+	mutation := newFileItemMutation(c.config, OpDelete)
+	return &FileItemDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *FileItemClient) DeleteOne(fi *FileItem) *FileItemDeleteOne {
+	return c.DeleteOneID(fi.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *FileItemClient) DeleteOneID(id int) *FileItemDeleteOne {
+	builder := c.Delete().Where(fileitem.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &FileItemDeleteOne{builder}
+}
+
+// Query returns a query builder for FileItem.
+func (c *FileItemClient) Query() *FileItemQuery {
+	return &FileItemQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeFileItem},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a FileItem entity by its id.
+func (c *FileItemClient) Get(ctx context.Context, id int) (*FileItem, error) {
+	return c.Query().Where(fileitem.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *FileItemClient) GetX(ctx context.Context, id int) *FileItem {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryRepository queries the repository edge of a FileItem.
+func (c *FileItemClient) QueryRepository(fi *FileItem) *RepositoryQuery {
+	query := (&RepositoryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := fi.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(fileitem.Table, fileitem.FieldID, id),
+			sqlgraph.To(repository.Table, repository.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, fileitem.RepositoryTable, fileitem.RepositoryColumn),
+		)
+		fromV = sqlgraph.Neighbors(fi.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryParent queries the parent edge of a FileItem.
+func (c *FileItemClient) QueryParent(fi *FileItem) *FileItemQuery {
+	query := (&FileItemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := fi.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(fileitem.Table, fileitem.FieldID, id),
+			sqlgraph.To(fileitem.Table, fileitem.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, fileitem.ParentTable, fileitem.ParentColumn),
+		)
+		fromV = sqlgraph.Neighbors(fi.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryChildren queries the children edge of a FileItem.
+func (c *FileItemClient) QueryChildren(fi *FileItem) *FileItemQuery {
+	query := (&FileItemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := fi.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(fileitem.Table, fileitem.FieldID, id),
+			sqlgraph.To(fileitem.Table, fileitem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fileitem.ChildrenTable, fileitem.ChildrenColumn),
+		)
+		fromV = sqlgraph.Neighbors(fi.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *FileItemClient) Hooks() []Hook {
+	return c.hooks.FileItem
+}
+
+// Interceptors returns the client interceptors.
+func (c *FileItemClient) Interceptors() []Interceptor {
+	return c.inters.FileItem
+}
+
+func (c *FileItemClient) mutate(ctx context.Context, m *FileItemMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&FileItemCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&FileItemUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&FileItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&FileItemDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown FileItem mutation op: %q", m.Op())
 	}
 }
 
@@ -304,6 +496,22 @@ func (c *RepositoryClient) GetX(ctx context.Context, id int) *Repository {
 	return obj
 }
 
+// QueryFiles queries the files edge of a Repository.
+func (c *RepositoryClient) QueryFiles(r *Repository) *FileItemQuery {
+	query := (&FileItemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(repository.Table, repository.FieldID, id),
+			sqlgraph.To(fileitem.Table, fileitem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.FilesTable, repository.FilesColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *RepositoryClient) Hooks() []Hook {
 	return c.hooks.Repository
@@ -332,9 +540,9 @@ func (c *RepositoryClient) mutate(ctx context.Context, m *RepositoryMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Repository []ent.Hook
+		FileItem, Repository []ent.Hook
 	}
 	inters struct {
-		Repository []ent.Interceptor
+		FileItem, Repository []ent.Interceptor
 	}
 )

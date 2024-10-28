@@ -2,8 +2,58 @@
 
 package ent
 
+import (
+	"time"
+
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/fileitem"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/schema"
+)
+
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	fileitemMixin := schema.FileItem{}.Mixin()
+	fileitemMixinFields0 := fileitemMixin[0].Fields()
+	_ = fileitemMixinFields0
+	fileitemFields := schema.FileItem{}.Fields()
+	_ = fileitemFields
+	// fileitemDescCreateTime is the schema descriptor for create_time field.
+	fileitemDescCreateTime := fileitemMixinFields0[0].Descriptor()
+	// fileitem.DefaultCreateTime holds the default value on creation for the create_time field.
+	fileitem.DefaultCreateTime = fileitemDescCreateTime.Default.(func() time.Time)
+	// fileitemDescUpdateTime is the schema descriptor for update_time field.
+	fileitemDescUpdateTime := fileitemMixinFields0[1].Descriptor()
+	// fileitem.DefaultUpdateTime holds the default value on creation for the update_time field.
+	fileitem.DefaultUpdateTime = fileitemDescUpdateTime.Default.(func() time.Time)
+	// fileitem.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	fileitem.UpdateDefaultUpdateTime = fileitemDescUpdateTime.UpdateDefault.(func() time.Time)
+	// fileitemDescName is the schema descriptor for name field.
+	fileitemDescName := fileitemFields[0].Descriptor()
+	// fileitem.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	fileitem.NameValidator = fileitemDescName.Validators[0].(func(string) error)
+	// fileitemDescHash is the schema descriptor for hash field.
+	fileitemDescHash := fileitemFields[1].Descriptor()
+	// fileitem.HashValidator is a validator for the "hash" field. It is called by the builders before save.
+	fileitem.HashValidator = fileitemDescHash.Validators[0].(func(string) error)
+	// fileitemDescIsDir is the schema descriptor for is_dir field.
+	fileitemDescIsDir := fileitemFields[2].Descriptor()
+	// fileitem.DefaultIsDir holds the default value on creation for the is_dir field.
+	fileitem.DefaultIsDir = fileitemDescIsDir.Default.(bool)
+	repositoryMixin := schema.Repository{}.Mixin()
+	repositoryMixinFields0 := repositoryMixin[0].Fields()
+	_ = repositoryMixinFields0
+	repositoryFields := schema.Repository{}.Fields()
+	_ = repositoryFields
+	// repositoryDescCreateTime is the schema descriptor for create_time field.
+	repositoryDescCreateTime := repositoryMixinFields0[0].Descriptor()
+	// repository.DefaultCreateTime holds the default value on creation for the create_time field.
+	repository.DefaultCreateTime = repositoryDescCreateTime.Default.(func() time.Time)
+	// repositoryDescUpdateTime is the schema descriptor for update_time field.
+	repositoryDescUpdateTime := repositoryMixinFields0[1].Descriptor()
+	// repository.DefaultUpdateTime holds the default value on creation for the update_time field.
+	repository.DefaultUpdateTime = repositoryDescUpdateTime.Default.(func() time.Time)
+	// repository.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	repository.UpdateDefaultUpdateTime = repositoryDescUpdateTime.UpdateDefault.(func() time.Time)
 }

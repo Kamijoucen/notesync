@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -16,11 +17,38 @@ type Repository struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// CreateTime holds the value of the "create_time" field.
+	CreateTime time.Time `json:"create_time,omitempty"`
+	// UpdateTime holds the value of the "update_time" field.
+	UpdateTime time.Time `json:"update_time,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// Description holds the value of the "description" field.
-	Description  string `json:"description,omitempty"`
+	Description string `json:"description,omitempty"`
+	// PublicKey holds the value of the "public_key" field.
+	PublicKey []byte `json:"public_key,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the RepositoryQuery when eager-loading is set.
+	Edges        RepositoryEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// RepositoryEdges holds the relations/edges for other nodes in the graph.
+type RepositoryEdges struct {
+	// Files holds the value of the files edge.
+	Files []*FileItem `json:"files,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// FilesOrErr returns the Files value or an error if the edge
+// was not loaded in eager-loading.
+func (e RepositoryEdges) FilesOrErr() ([]*FileItem, error) {
+	if e.loadedTypes[0] {
+		return e.Files, nil
+	}
+	return nil, &NotLoadedError{edge: "files"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -28,10 +56,14 @@ func (*Repository) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case repository.FieldPublicKey:
+			values[i] = new([]byte)
 		case repository.FieldID:
 			values[i] = new(sql.NullInt64)
 		case repository.FieldName, repository.FieldDescription:
 			values[i] = new(sql.NullString)
+		case repository.FieldCreateTime, repository.FieldUpdateTime:
+			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -53,6 +85,18 @@ func (r *Repository) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			r.ID = int(value.Int64)
+		case repository.FieldCreateTime:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field create_time", values[i])
+			} else if value.Valid {
+				r.CreateTime = value.Time
+			}
+		case repository.FieldUpdateTime:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field update_time", values[i])
+			} else if value.Valid {
+				r.UpdateTime = value.Time
+			}
 		case repository.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
@@ -65,6 +109,12 @@ func (r *Repository) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				r.Description = value.String
 			}
+		case repository.FieldPublicKey:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field public_key", values[i])
+			} else if value != nil {
+				r.PublicKey = *value
+			}
 		default:
 			r.selectValues.Set(columns[i], values[i])
 		}
@@ -76,6 +126,11 @@ func (r *Repository) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (r *Repository) Value(name string) (ent.Value, error) {
 	return r.selectValues.Get(name)
+}
+
+// QueryFiles queries the "files" edge of the Repository entity.
+func (r *Repository) QueryFiles() *FileItemQuery {
+	return NewRepositoryClient(r.config).QueryFiles(r)
 }
 
 // Update returns a builder for updating this Repository.
@@ -101,11 +156,20 @@ func (r *Repository) String() string {
 	var builder strings.Builder
 	builder.WriteString("Repository(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", r.ID))
+	builder.WriteString("create_time=")
+	builder.WriteString(r.CreateTime.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("update_time=")
+	builder.WriteString(r.UpdateTime.Format(time.ANSIC))
+	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(r.Name)
 	builder.WriteString(", ")
 	builder.WriteString("description=")
 	builder.WriteString(r.Description)
+	builder.WriteString(", ")
+	builder.WriteString("public_key=")
+	builder.WriteString(fmt.Sprintf("%v", r.PublicKey))
 	builder.WriteByte(')')
 	return builder.String()
 }

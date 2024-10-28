@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/fileitem"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/predicate"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
@@ -22,6 +24,7 @@ type RepositoryQuery struct {
 	order      []repository.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Repository
+	withFiles  *FileItemQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,28 @@ func (rq *RepositoryQuery) Unique(unique bool) *RepositoryQuery {
 func (rq *RepositoryQuery) Order(o ...repository.OrderOption) *RepositoryQuery {
 	rq.order = append(rq.order, o...)
 	return rq
+}
+
+// QueryFiles chains the current query on the "files" edge.
+func (rq *RepositoryQuery) QueryFiles() *FileItemQuery {
+	query := (&FileItemClient{config: rq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(repository.Table, repository.FieldID, selector),
+			sqlgraph.To(fileitem.Table, fileitem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, repository.FilesTable, repository.FilesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Repository entity from the query.
@@ -250,10 +275,22 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 		order:      append([]repository.OrderOption{}, rq.order...),
 		inters:     append([]Interceptor{}, rq.inters...),
 		predicates: append([]predicate.Repository{}, rq.predicates...),
+		withFiles:  rq.withFiles.Clone(),
 		// clone intermediate query.
 		sql:  rq.sql.Clone(),
 		path: rq.path,
 	}
+}
+
+// WithFiles tells the query-builder to eager-load the nodes that are connected to
+// the "files" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RepositoryQuery) WithFiles(opts ...func(*FileItemQuery)) *RepositoryQuery {
+	query := (&FileItemClient{config: rq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withFiles = query
+	return rq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -262,12 +299,12 @@ func (rq *RepositoryQuery) Clone() *RepositoryQuery {
 // Example:
 //
 //	var v []struct {
-//		Name string `json:"name,omitempty"`
+//		CreateTime time.Time `json:"create_time,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Repository.Query().
-//		GroupBy(repository.FieldName).
+//		GroupBy(repository.FieldCreateTime).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGroupBy {
@@ -285,11 +322,11 @@ func (rq *RepositoryQuery) GroupBy(field string, fields ...string) *RepositoryGr
 // Example:
 //
 //	var v []struct {
-//		Name string `json:"name,omitempty"`
+//		CreateTime time.Time `json:"create_time,omitempty"`
 //	}
 //
 //	client.Repository.Query().
-//		Select(repository.FieldName).
+//		Select(repository.FieldCreateTime).
 //		Scan(ctx, &v)
 func (rq *RepositoryQuery) Select(fields ...string) *RepositorySelect {
 	rq.ctx.Fields = append(rq.ctx.Fields, fields...)
@@ -332,8 +369,11 @@ func (rq *RepositoryQuery) prepareQuery(ctx context.Context) error {
 
 func (rq *RepositoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Repository, error) {
 	var (
-		nodes = []*Repository{}
-		_spec = rq.querySpec()
+		nodes       = []*Repository{}
+		_spec       = rq.querySpec()
+		loadedTypes = [1]bool{
+			rq.withFiles != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Repository).scanValues(nil, columns)
@@ -341,6 +381,7 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*R
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Repository{config: rq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +393,46 @@ func (rq *RepositoryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*R
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := rq.withFiles; query != nil {
+		if err := rq.loadFiles(ctx, query, nodes,
+			func(n *Repository) { n.Edges.Files = []*FileItem{} },
+			func(n *Repository, e *FileItem) { n.Edges.Files = append(n.Edges.Files, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (rq *RepositoryQuery) loadFiles(ctx context.Context, query *FileItemQuery, nodes []*Repository, init func(*Repository), assign func(*Repository, *FileItem)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Repository)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.FileItem(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(repository.FilesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.repository_files
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "repository_files" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "repository_files" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (rq *RepositoryQuery) sqlCount(ctx context.Context) (int, error) {

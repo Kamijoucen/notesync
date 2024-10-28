@@ -7,14 +7,15 @@ import (
 )
 
 type RequestContext struct {
-	Ctx       context.Context
-	EchoCtx   echo.Context
-	ServerCtx *ServerContext
+	Ctx     context.Context
+	EchoCtx echo.Context
+	ServerContext
 }
 
 func NewRequestContext(serverCtx *ServerContext, echoCtx echo.Context) *RequestContext {
 	return &RequestContext{
-		ServerCtx: serverCtx,
-		EchoCtx:   echoCtx,
+		Ctx:           context.Background(),
+		EchoCtx:       echoCtx,
+		ServerContext: *serverCtx,
 	}
 }

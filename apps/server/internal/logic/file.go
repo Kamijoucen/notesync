@@ -12,10 +12,7 @@ import (
 
 // SyncRepoMeta 创建仓库
 func SyncRepoMeta(svc *ctx.RequestContext, req *param.CreateRepositoryRequest) (*param.CreateRepositoryResponse, error) {
-
-	
-
-	err := svc.ServerCtx.Ent.Repository.Create().
+	err := svc.Ent.Repository.Create().
 		SetName(req.Name).
 		SetDescription(req.Description).
 		Exec(svc.Ctx)
@@ -28,7 +25,7 @@ func SyncRepoMeta(svc *ctx.RequestContext, req *param.CreateRepositoryRequest) (
 // StoreFile 向仓库存储文件
 func StoreFile(svc *ctx.RequestContext, src *definition.FileSource) error {
 	// joinpath
-	filepath := path.Join(svc.ServerCtx.Config.FilePath, src.Name)
+	filepath := path.Join(svc.Config.FilePath, src.Name)
 	dst, err := os.Create(filepath)
 	if err != nil {
 		return err

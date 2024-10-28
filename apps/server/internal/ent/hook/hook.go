@@ -9,6 +9,18 @@ import (
 	"github.com/kamijoucen/notesync/apps/server/internal/ent"
 )
 
+// The FileItemFunc type is an adapter to allow the use of ordinary
+// function as FileItem mutator.
+type FileItemFunc func(context.Context, *ent.FileItemMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f FileItemFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.FileItemMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FileItemMutation", m)
+}
+
 // The RepositoryFunc type is an adapter to allow the use of ordinary
 // function as Repository mutator.
 type RepositoryFunc func(context.Context, *ent.RepositoryMutation) (ent.Value, error)

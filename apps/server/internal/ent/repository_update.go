@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/fileitem"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/predicate"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
@@ -24,6 +26,12 @@ type RepositoryUpdate struct {
 // Where appends a list predicates to the RepositoryUpdate builder.
 func (ru *RepositoryUpdate) Where(ps ...predicate.Repository) *RepositoryUpdate {
 	ru.mutation.Where(ps...)
+	return ru
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (ru *RepositoryUpdate) SetUpdateTime(t time.Time) *RepositoryUpdate {
+	ru.mutation.SetUpdateTime(t)
 	return ru
 }
 
@@ -55,13 +63,56 @@ func (ru *RepositoryUpdate) SetNillableDescription(s *string) *RepositoryUpdate 
 	return ru
 }
 
+// SetPublicKey sets the "public_key" field.
+func (ru *RepositoryUpdate) SetPublicKey(b []byte) *RepositoryUpdate {
+	ru.mutation.SetPublicKey(b)
+	return ru
+}
+
+// AddFileIDs adds the "files" edge to the FileItem entity by IDs.
+func (ru *RepositoryUpdate) AddFileIDs(ids ...int) *RepositoryUpdate {
+	ru.mutation.AddFileIDs(ids...)
+	return ru
+}
+
+// AddFiles adds the "files" edges to the FileItem entity.
+func (ru *RepositoryUpdate) AddFiles(f ...*FileItem) *RepositoryUpdate {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ru.AddFileIDs(ids...)
+}
+
 // Mutation returns the RepositoryMutation object of the builder.
 func (ru *RepositoryUpdate) Mutation() *RepositoryMutation {
 	return ru.mutation
 }
 
+// ClearFiles clears all "files" edges to the FileItem entity.
+func (ru *RepositoryUpdate) ClearFiles() *RepositoryUpdate {
+	ru.mutation.ClearFiles()
+	return ru
+}
+
+// RemoveFileIDs removes the "files" edge to FileItem entities by IDs.
+func (ru *RepositoryUpdate) RemoveFileIDs(ids ...int) *RepositoryUpdate {
+	ru.mutation.RemoveFileIDs(ids...)
+	return ru
+}
+
+// RemoveFiles removes "files" edges to FileItem entities.
+func (ru *RepositoryUpdate) RemoveFiles(f ...*FileItem) *RepositoryUpdate {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ru.RemoveFileIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ru *RepositoryUpdate) Save(ctx context.Context) (int, error) {
+	ru.defaults()
 	return withHooks(ctx, ru.sqlSave, ru.mutation, ru.hooks)
 }
 
@@ -87,6 +138,14 @@ func (ru *RepositoryUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (ru *RepositoryUpdate) defaults() {
+	if _, ok := ru.mutation.UpdateTime(); !ok {
+		v := repository.UpdateDefaultUpdateTime()
+		ru.mutation.SetUpdateTime(v)
+	}
+}
+
 func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(repository.Table, repository.Columns, sqlgraph.NewFieldSpec(repository.FieldID, field.TypeInt))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
@@ -96,11 +155,62 @@ func (ru *RepositoryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := ru.mutation.UpdateTime(); ok {
+		_spec.SetField(repository.FieldUpdateTime, field.TypeTime, value)
+	}
 	if value, ok := ru.mutation.Name(); ok {
 		_spec.SetField(repository.FieldName, field.TypeString, value)
 	}
 	if value, ok := ru.mutation.Description(); ok {
 		_spec.SetField(repository.FieldDescription, field.TypeString, value)
+	}
+	if value, ok := ru.mutation.PublicKey(); ok {
+		_spec.SetField(repository.FieldPublicKey, field.TypeBytes, value)
+	}
+	if ru.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.RemovedFilesIDs(); len(nodes) > 0 && !ru.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.FilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ru.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -120,6 +230,12 @@ type RepositoryUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *RepositoryMutation
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (ruo *RepositoryUpdateOne) SetUpdateTime(t time.Time) *RepositoryUpdateOne {
+	ruo.mutation.SetUpdateTime(t)
+	return ruo
 }
 
 // SetName sets the "name" field.
@@ -150,9 +266,51 @@ func (ruo *RepositoryUpdateOne) SetNillableDescription(s *string) *RepositoryUpd
 	return ruo
 }
 
+// SetPublicKey sets the "public_key" field.
+func (ruo *RepositoryUpdateOne) SetPublicKey(b []byte) *RepositoryUpdateOne {
+	ruo.mutation.SetPublicKey(b)
+	return ruo
+}
+
+// AddFileIDs adds the "files" edge to the FileItem entity by IDs.
+func (ruo *RepositoryUpdateOne) AddFileIDs(ids ...int) *RepositoryUpdateOne {
+	ruo.mutation.AddFileIDs(ids...)
+	return ruo
+}
+
+// AddFiles adds the "files" edges to the FileItem entity.
+func (ruo *RepositoryUpdateOne) AddFiles(f ...*FileItem) *RepositoryUpdateOne {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ruo.AddFileIDs(ids...)
+}
+
 // Mutation returns the RepositoryMutation object of the builder.
 func (ruo *RepositoryUpdateOne) Mutation() *RepositoryMutation {
 	return ruo.mutation
+}
+
+// ClearFiles clears all "files" edges to the FileItem entity.
+func (ruo *RepositoryUpdateOne) ClearFiles() *RepositoryUpdateOne {
+	ruo.mutation.ClearFiles()
+	return ruo
+}
+
+// RemoveFileIDs removes the "files" edge to FileItem entities by IDs.
+func (ruo *RepositoryUpdateOne) RemoveFileIDs(ids ...int) *RepositoryUpdateOne {
+	ruo.mutation.RemoveFileIDs(ids...)
+	return ruo
+}
+
+// RemoveFiles removes "files" edges to FileItem entities.
+func (ruo *RepositoryUpdateOne) RemoveFiles(f ...*FileItem) *RepositoryUpdateOne {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return ruo.RemoveFileIDs(ids...)
 }
 
 // Where appends a list predicates to the RepositoryUpdate builder.
@@ -170,6 +328,7 @@ func (ruo *RepositoryUpdateOne) Select(field string, fields ...string) *Reposito
 
 // Save executes the query and returns the updated Repository entity.
 func (ruo *RepositoryUpdateOne) Save(ctx context.Context) (*Repository, error) {
+	ruo.defaults()
 	return withHooks(ctx, ruo.sqlSave, ruo.mutation, ruo.hooks)
 }
 
@@ -192,6 +351,14 @@ func (ruo *RepositoryUpdateOne) Exec(ctx context.Context) error {
 func (ruo *RepositoryUpdateOne) ExecX(ctx context.Context) {
 	if err := ruo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (ruo *RepositoryUpdateOne) defaults() {
+	if _, ok := ruo.mutation.UpdateTime(); !ok {
+		v := repository.UpdateDefaultUpdateTime()
+		ruo.mutation.SetUpdateTime(v)
 	}
 }
 
@@ -221,11 +388,62 @@ func (ruo *RepositoryUpdateOne) sqlSave(ctx context.Context) (_node *Repository,
 			}
 		}
 	}
+	if value, ok := ruo.mutation.UpdateTime(); ok {
+		_spec.SetField(repository.FieldUpdateTime, field.TypeTime, value)
+	}
 	if value, ok := ruo.mutation.Name(); ok {
 		_spec.SetField(repository.FieldName, field.TypeString, value)
 	}
 	if value, ok := ruo.mutation.Description(); ok {
 		_spec.SetField(repository.FieldDescription, field.TypeString, value)
+	}
+	if value, ok := ruo.mutation.PublicKey(); ok {
+		_spec.SetField(repository.FieldPublicKey, field.TypeBytes, value)
+	}
+	if ruo.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.RemovedFilesIDs(); len(nodes) > 0 && !ruo.mutation.FilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.FilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Repository{config: ruo.config}
 	_spec.Assign = _node.assignValues

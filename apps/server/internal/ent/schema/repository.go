@@ -2,7 +2,9 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/mixin"
 )
 
 // Repository holds the schema definition for the Repository entity.
@@ -21,5 +23,14 @@ func (Repository) Fields() []ent.Field {
 
 // Edges of the Repository.
 func (Repository) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("files", FileItem.Type),
+	}
+}
+
+// Mixin of the Repository.
+func (Repository) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixin.Time{},
+	}
 }

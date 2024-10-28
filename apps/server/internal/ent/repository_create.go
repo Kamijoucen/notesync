@@ -6,10 +6,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/kamijoucen/notesync/apps/server/internal/ent/fileitem"
 	"github.com/kamijoucen/notesync/apps/server/internal/ent/repository"
 )
 
@@ -19,6 +21,34 @@ type RepositoryCreate struct {
 	mutation *RepositoryMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetCreateTime sets the "create_time" field.
+func (rc *RepositoryCreate) SetCreateTime(t time.Time) *RepositoryCreate {
+	rc.mutation.SetCreateTime(t)
+	return rc
+}
+
+// SetNillableCreateTime sets the "create_time" field if the given value is not nil.
+func (rc *RepositoryCreate) SetNillableCreateTime(t *time.Time) *RepositoryCreate {
+	if t != nil {
+		rc.SetCreateTime(*t)
+	}
+	return rc
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (rc *RepositoryCreate) SetUpdateTime(t time.Time) *RepositoryCreate {
+	rc.mutation.SetUpdateTime(t)
+	return rc
+}
+
+// SetNillableUpdateTime sets the "update_time" field if the given value is not nil.
+func (rc *RepositoryCreate) SetNillableUpdateTime(t *time.Time) *RepositoryCreate {
+	if t != nil {
+		rc.SetUpdateTime(*t)
+	}
+	return rc
 }
 
 // SetName sets the "name" field.
@@ -33,6 +63,27 @@ func (rc *RepositoryCreate) SetDescription(s string) *RepositoryCreate {
 	return rc
 }
 
+// SetPublicKey sets the "public_key" field.
+func (rc *RepositoryCreate) SetPublicKey(b []byte) *RepositoryCreate {
+	rc.mutation.SetPublicKey(b)
+	return rc
+}
+
+// AddFileIDs adds the "files" edge to the FileItem entity by IDs.
+func (rc *RepositoryCreate) AddFileIDs(ids ...int) *RepositoryCreate {
+	rc.mutation.AddFileIDs(ids...)
+	return rc
+}
+
+// AddFiles adds the "files" edges to the FileItem entity.
+func (rc *RepositoryCreate) AddFiles(f ...*FileItem) *RepositoryCreate {
+	ids := make([]int, len(f))
+	for i := range f {
+		ids[i] = f[i].ID
+	}
+	return rc.AddFileIDs(ids...)
+}
+
 // Mutation returns the RepositoryMutation object of the builder.
 func (rc *RepositoryCreate) Mutation() *RepositoryMutation {
 	return rc.mutation
@@ -40,6 +91,7 @@ func (rc *RepositoryCreate) Mutation() *RepositoryMutation {
 
 // Save creates the Repository in the database.
 func (rc *RepositoryCreate) Save(ctx context.Context) (*Repository, error) {
+	rc.defaults()
 	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
@@ -65,13 +117,34 @@ func (rc *RepositoryCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (rc *RepositoryCreate) defaults() {
+	if _, ok := rc.mutation.CreateTime(); !ok {
+		v := repository.DefaultCreateTime()
+		rc.mutation.SetCreateTime(v)
+	}
+	if _, ok := rc.mutation.UpdateTime(); !ok {
+		v := repository.DefaultUpdateTime()
+		rc.mutation.SetUpdateTime(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (rc *RepositoryCreate) check() error {
+	if _, ok := rc.mutation.CreateTime(); !ok {
+		return &ValidationError{Name: "create_time", err: errors.New(`ent: missing required field "Repository.create_time"`)}
+	}
+	if _, ok := rc.mutation.UpdateTime(); !ok {
+		return &ValidationError{Name: "update_time", err: errors.New(`ent: missing required field "Repository.update_time"`)}
+	}
 	if _, ok := rc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Repository.name"`)}
 	}
 	if _, ok := rc.mutation.Description(); !ok {
 		return &ValidationError{Name: "description", err: errors.New(`ent: missing required field "Repository.description"`)}
+	}
+	if _, ok := rc.mutation.PublicKey(); !ok {
+		return &ValidationError{Name: "public_key", err: errors.New(`ent: missing required field "Repository.public_key"`)}
 	}
 	return nil
 }
@@ -100,6 +173,14 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(repository.Table, sqlgraph.NewFieldSpec(repository.FieldID, field.TypeInt))
 	)
 	_spec.OnConflict = rc.conflict
+	if value, ok := rc.mutation.CreateTime(); ok {
+		_spec.SetField(repository.FieldCreateTime, field.TypeTime, value)
+		_node.CreateTime = value
+	}
+	if value, ok := rc.mutation.UpdateTime(); ok {
+		_spec.SetField(repository.FieldUpdateTime, field.TypeTime, value)
+		_node.UpdateTime = value
+	}
 	if value, ok := rc.mutation.Name(); ok {
 		_spec.SetField(repository.FieldName, field.TypeString, value)
 		_node.Name = value
@@ -108,6 +189,26 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 		_spec.SetField(repository.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
+	if value, ok := rc.mutation.PublicKey(); ok {
+		_spec.SetField(repository.FieldPublicKey, field.TypeBytes, value)
+		_node.PublicKey = value
+	}
+	if nodes := rc.mutation.FilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   repository.FilesTable,
+			Columns: []string{repository.FilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(fileitem.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -115,7 +216,7 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.Repository.Create().
-//		SetName(v).
+//		SetCreateTime(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -124,7 +225,7 @@ func (rc *RepositoryCreate) createSpec() (*Repository, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.RepositoryUpsert) {
-//			SetName(v+v).
+//			SetCreateTime(v+v).
 //		}).
 //		Exec(ctx)
 func (rc *RepositoryCreate) OnConflict(opts ...sql.ConflictOption) *RepositoryUpsertOne {
@@ -160,6 +261,18 @@ type (
 	}
 )
 
+// SetUpdateTime sets the "update_time" field.
+func (u *RepositoryUpsert) SetUpdateTime(v time.Time) *RepositoryUpsert {
+	u.Set(repository.FieldUpdateTime, v)
+	return u
+}
+
+// UpdateUpdateTime sets the "update_time" field to the value that was provided on create.
+func (u *RepositoryUpsert) UpdateUpdateTime() *RepositoryUpsert {
+	u.SetExcluded(repository.FieldUpdateTime)
+	return u
+}
+
 // SetName sets the "name" field.
 func (u *RepositoryUpsert) SetName(v string) *RepositoryUpsert {
 	u.Set(repository.FieldName, v)
@@ -184,6 +297,18 @@ func (u *RepositoryUpsert) UpdateDescription() *RepositoryUpsert {
 	return u
 }
 
+// SetPublicKey sets the "public_key" field.
+func (u *RepositoryUpsert) SetPublicKey(v []byte) *RepositoryUpsert {
+	u.Set(repository.FieldPublicKey, v)
+	return u
+}
+
+// UpdatePublicKey sets the "public_key" field to the value that was provided on create.
+func (u *RepositoryUpsert) UpdatePublicKey() *RepositoryUpsert {
+	u.SetExcluded(repository.FieldPublicKey)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -194,6 +319,11 @@ func (u *RepositoryUpsert) UpdateDescription() *RepositoryUpsert {
 //		Exec(ctx)
 func (u *RepositoryUpsertOne) UpdateNewValues() *RepositoryUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreateTime(); exists {
+			s.SetIgnore(repository.FieldCreateTime)
+		}
+	}))
 	return u
 }
 
@@ -224,6 +354,20 @@ func (u *RepositoryUpsertOne) Update(set func(*RepositoryUpsert)) *RepositoryUps
 	return u
 }
 
+// SetUpdateTime sets the "update_time" field.
+func (u *RepositoryUpsertOne) SetUpdateTime(v time.Time) *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetUpdateTime(v)
+	})
+}
+
+// UpdateUpdateTime sets the "update_time" field to the value that was provided on create.
+func (u *RepositoryUpsertOne) UpdateUpdateTime() *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdateUpdateTime()
+	})
+}
+
 // SetName sets the "name" field.
 func (u *RepositoryUpsertOne) SetName(v string) *RepositoryUpsertOne {
 	return u.Update(func(s *RepositoryUpsert) {
@@ -249,6 +393,20 @@ func (u *RepositoryUpsertOne) SetDescription(v string) *RepositoryUpsertOne {
 func (u *RepositoryUpsertOne) UpdateDescription() *RepositoryUpsertOne {
 	return u.Update(func(s *RepositoryUpsert) {
 		s.UpdateDescription()
+	})
+}
+
+// SetPublicKey sets the "public_key" field.
+func (u *RepositoryUpsertOne) SetPublicKey(v []byte) *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetPublicKey(v)
+	})
+}
+
+// UpdatePublicKey sets the "public_key" field to the value that was provided on create.
+func (u *RepositoryUpsertOne) UpdatePublicKey() *RepositoryUpsertOne {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdatePublicKey()
 	})
 }
 
@@ -304,6 +462,7 @@ func (rcb *RepositoryCreateBulk) Save(ctx context.Context) ([]*Repository, error
 	for i := range rcb.builders {
 		func(i int, root context.Context) {
 			builder := rcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*RepositoryMutation)
 				if !ok {
@@ -386,7 +545,7 @@ func (rcb *RepositoryCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.RepositoryUpsert) {
-//			SetName(v+v).
+//			SetCreateTime(v+v).
 //		}).
 //		Exec(ctx)
 func (rcb *RepositoryCreateBulk) OnConflict(opts ...sql.ConflictOption) *RepositoryUpsertBulk {
@@ -425,6 +584,13 @@ type RepositoryUpsertBulk struct {
 //		Exec(ctx)
 func (u *RepositoryUpsertBulk) UpdateNewValues() *RepositoryUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreateTime(); exists {
+				s.SetIgnore(repository.FieldCreateTime)
+			}
+		}
+	}))
 	return u
 }
 
@@ -455,6 +621,20 @@ func (u *RepositoryUpsertBulk) Update(set func(*RepositoryUpsert)) *RepositoryUp
 	return u
 }
 
+// SetUpdateTime sets the "update_time" field.
+func (u *RepositoryUpsertBulk) SetUpdateTime(v time.Time) *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetUpdateTime(v)
+	})
+}
+
+// UpdateUpdateTime sets the "update_time" field to the value that was provided on create.
+func (u *RepositoryUpsertBulk) UpdateUpdateTime() *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdateUpdateTime()
+	})
+}
+
 // SetName sets the "name" field.
 func (u *RepositoryUpsertBulk) SetName(v string) *RepositoryUpsertBulk {
 	return u.Update(func(s *RepositoryUpsert) {
@@ -480,6 +660,20 @@ func (u *RepositoryUpsertBulk) SetDescription(v string) *RepositoryUpsertBulk {
 func (u *RepositoryUpsertBulk) UpdateDescription() *RepositoryUpsertBulk {
 	return u.Update(func(s *RepositoryUpsert) {
 		s.UpdateDescription()
+	})
+}
+
+// SetPublicKey sets the "public_key" field.
+func (u *RepositoryUpsertBulk) SetPublicKey(v []byte) *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.SetPublicKey(v)
+	})
+}
+
+// UpdatePublicKey sets the "public_key" field to the value that was provided on create.
+func (u *RepositoryUpsertBulk) UpdatePublicKey() *RepositoryUpsertBulk {
+	return u.Update(func(s *RepositoryUpsert) {
+		s.UpdatePublicKey()
 	})
 }
 
